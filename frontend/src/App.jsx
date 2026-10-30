@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+/* eslint-disable react/set-state-in-effect */
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { toast, ToastContainer } from 'react-toastify'
@@ -129,7 +130,7 @@ function CartProvider({ children }) {
   const { token, user } = useAuth()
   const [cartCount, setCartCount] = useState(0)
 
-  const refreshCartCount = async () => {
+  const refreshCartCount = useCallback(async () => {
     if (!token) {
       const guestCart = JSON.parse(localStorage.getItem('guest_cart') || '[]')
       const count = guestCart.reduce((total, item) => total + Number(item.quantity || 1), 0)
@@ -140,15 +141,15 @@ function CartProvider({ children }) {
       const response = await api.get('/cart')
       setCartCount(response.data.count || 0)
       return response.data.count || 0
-    } catch (error) {
+    } catch {
       setCartCount(0)
       return 0
     }
-  }
+  }, [token])
 
   useEffect(() => {
     refreshCartCount()
-  }, [token, user])
+  }, [refreshCartCount, user])
 
   const addToCart = async (productId, quantity = 1) => {
     if (!token) {
@@ -884,7 +885,7 @@ function CartPage() {
   const { token } = useAuth()
   const { refreshCartCount, updateCartItem, removeCartItem } = useCart()
 
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     if (!token) {
       const guestCart = JSON.parse(localStorage.getItem('guest_cart') || '[]')
       if (!guestCart.length) {
@@ -903,7 +904,7 @@ function CartPage() {
         setItems(hydratedItems)
         setSubtotal(hydratedItems.reduce((total, item) => total + item.subtotal, 0))
         setLoading(false)
-      } catch (error) {
+      } catch {
         setItems([])
         setSubtotal(0)
         setLoading(false)
@@ -915,17 +916,17 @@ function CartPage() {
       const response = await api.get('/cart')
       setItems(response.data.items || [])
       setSubtotal(response.data.subtotal || 0)
-    } catch (error) {
+    } catch {
       setItems([])
       setSubtotal(0)
     } finally {
       setLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     fetchCart()
-  }, [token])
+  }, [fetchCart])
 
   const totalItems = items.reduce((total, item) => total + item.quantity, 0)
 
@@ -1057,8 +1058,9 @@ function LoginPage() {
   const onSubmit = async (event) => {
     event.preventDefault()
     try {
-      await login(form.email, form.password)
-      navigate(location.state?.from || '/shop')
+      const result = await login(form.email, form.password)
+      const destination = result.user.role === 'admin' ? '/admin' : location.state?.from || '/shop'
+      navigate(destination)
       toast.success('Login successful')
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed')
@@ -1200,7 +1202,7 @@ function CheckoutPage() {
       try {
         const response = await api.get('/cart')
         setCart(response.data)
-      } catch (error) {
+      } catch {
         setCart({ items: [], subtotal: 0 })
       } finally {
         setLoading(false)

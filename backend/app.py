@@ -1,7 +1,7 @@
 import os
 import random
 import string
-from datetime import datetime
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
@@ -41,7 +41,9 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default="customer")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     cart_items = db.relationship("CartItem", backref="user", cascade="all, delete-orphan")
     wishlist_items = db.relationship("WishlistItem", backref="user", cascade="all, delete-orphan")
@@ -73,7 +75,9 @@ class Product(db.Model):
     bestseller = db.Column(db.Boolean, default=False)
     new_arrival = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     def serialize(self):
         return {
@@ -139,7 +143,9 @@ class Order(db.Model):
     discount_amount = db.Column(db.Float, nullable=False, default=0)
     total = db.Column(db.Float, nullable=False, default=0)
     coupon_code = db.Column(db.String(30), default="")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     items = db.relationship("OrderItem", backref="order", cascade="all, delete-orphan")
 
